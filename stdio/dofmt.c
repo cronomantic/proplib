@@ -821,7 +821,9 @@ _fmt_float(_Printf_info *pi, va_ptr args)
         } else {
             *buf++ = '0';
         }
-        if (i == decpt) {
+        // the radix only when digits follow it, or with '#' ("%.0f" of
+        // 5.0 is "5", "%#.0f" is "5.")
+        if (i == decpt && (i + 1 < enddigit || pi->alt)) {
             *buf++ = '.';
         }
     }
