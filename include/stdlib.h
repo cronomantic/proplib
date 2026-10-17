@@ -35,6 +35,9 @@ extern "C" {
   void *calloc(size_t, size_t);
   void *realloc(void *, size_t);
   void free(void *);
+#if !defined(__STRICT_ANSI__) || (defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L)
+  void *aligned_alloc(size_t alignment, size_t size);
+#endif
 
   void *_hubmalloc(size_t n);
   void *_hubcalloc(size_t, size_t);

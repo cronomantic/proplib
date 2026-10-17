@@ -22,6 +22,17 @@ typedef struct MemHeap {
 /* magic number to indicate allocated memory */
 #define MAGIC ((MemHeader *)0xa110c)
 
+/* in the header in front of a block from aligned_alloc: len is then the
+   distance in bytes back to the start of the malloc block holding it */
+#define ALIGNED_MAGIC ((MemHeader *)0xa11a1)
+
+/* the malloc block holding ptr, from aligned_alloc or malloc */
+static inline void *_malloc_block(void *ptr)
+{
+  MemHeader *h = (MemHeader *)ptr - 1;
+  return h->next == ALIGNED_MAGIC ? (char *)ptr - h->len : ptr;
+}
+
 /* normal and hub heaps */
 extern MemHeap _malloc_heap;
 extern MemHeap _hub_malloc_heap;

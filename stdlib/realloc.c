@@ -57,6 +57,19 @@ common_realloc(MemHeap *heap, void *ptr, size_t n)
 
   thisp = (MemHeader *)ptr;
   --thisp;
+  if (thisp->next == ALIGNED_MAGIC)
+    {
+      /* from aligned_alloc: a new block (realloc keeps only malloc's
+         alignment), with what fits of the old contents */
+      MemHeader *block = (MemHeader *)_malloc_block(ptr) - 1;
+      size_t have = (block->len - 1) * sizeof(MemHeader) - thisp->len;
+      newptr = _common_malloc(heap, n);
+      if (!newptr)
+        return NULL;
+      memcpy(newptr, ptr, have < n ? have : n);
+      free(ptr);
+      return newptr;
+    }
   if (thisp->next != MAGIC)
     {
       return NULL; /* cannot do anything */
@@ -74,7 +87,8 @@ common_realloc(MemHeap *heap, void *ptr, size_t n)
       newp = thisp + numunits;
       newp->next = MAGIC;
       newp->len = thisp->len - numunits;
-      thisp->len -= numunits;
+      thisp->len = numunits;    /* was "-= numunits": the block kept the
+                                   freed tail's size and overlapped it */
       free(newp+1);
       return ptr;
     }

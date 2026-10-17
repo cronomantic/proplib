@@ -96,7 +96,7 @@ common_free(MemHeap *heap, void *ptr)
 {
   struct MemHeader *thisp, *p, **prev;
 
-  thisp = (MemHeader *)ptr;
+  thisp = (MemHeader *)_malloc_block(ptr);
   --thisp;
   if (thisp->next != MAGIC)
     {
@@ -158,6 +158,36 @@ common_free(MemHeap *heap, void *ptr)
   thisp->next = *prev;
   *prev = thisp;
   __unlock(&malloc_lock);
+}
+
+/*
+ * aligned_alloc (C11): memory aligned to 'align', a power of two.  A
+ * malloc block with room for an aligned address and a header in front
+ * of it; the header (ALIGNED_MAGIC) leads free and realloc back to the
+ * block.  malloc already aligns to 4.
+ */
+void *
+aligned_alloc(size_t align, size_t n)
+{
+  char *raw, *p;
+  MemHeader *h;
+
+  if (align == 0 || (align & (align - 1)) != 0)
+    return NULL;
+  if (align <= sizeof(int))
+    return malloc(n);
+  /* malloc's 4-aligned block, plus a header, plus up to align - 4 to
+     reach the next multiple of align */
+  if (n > (size_t)-1 - align - sizeof(MemHeader))
+    return NULL;
+  raw = malloc(n + sizeof(MemHeader) + align - sizeof(int));
+  if (!raw)
+    return NULL;
+  p = (char *)(((unsigned long)raw + sizeof(MemHeader) + align - 1) & ~(unsigned long)(align - 1));
+  h = (MemHeader *)p - 1;
+  h->next = ALIGNED_MAGIC;
+  h->len = p - raw;
+  return p;
 }
 
 #if defined(__PROPELLER_LMM__) || defined(__PROPELLER_XMMC__)
